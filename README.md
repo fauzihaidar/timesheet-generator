@@ -8,6 +8,11 @@ Aplikasi web (satu file, tanpa server) untuk membuat **Form Timesheet Gajian** t
 3. Isi cuti dan remarks kegiatan bila perlu (opsional).
 4. Klik **Unduh Excel** atau **Unduh PDF**.
 
+## Opsi tambahan
+- **Identitas & tanda tangan (opsional):** ganti *Name Of Project*, *Location*, *Nama*, dan upload gambar tanda tangan (Employee). Kosong = pakai isi template. Ukuran tanda tangan otomatis disesuaikan dengan kotak di template.
+- **Cuti dan remarks kegiatan:** tanggalnya hanya bisa dipilih di dalam periode.
+- **Template bawaan** terpasang otomatis; template lain tetap bisa di-upload.
+
 ## Aturan yang diterapkan
 - Sabtu/Minggu: baris merah, remarks `Weekend`, jam 00:00.
 - Libur nasional (SKB 3 Menteri 2026–2027): baris merah, remarks nama libur, jam 00:00, tidak dihitung kehadiran. Cuti bersama tidak dimerahkan.

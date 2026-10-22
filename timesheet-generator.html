@@ -30,30 +30,40 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div id="tplstat" style="margin-top:8px;font-size:13px;color:var(--mut)">Belum ada template terpasang.</div>
 <label for="f">File template</label><input type="file" id="f" accept=".xlsx"></div>
 
-<div class="card"><h2>2. Periode</h2>
+<div class="card"><h2>2. Identitas &amp; tanda tangan <small>(opsional)</small></h2>
+<small>Kosongkan untuk memakai isi template. Jika diisi, menggantikan isi template di Excel dan PDF.</small>
+<label for="ov_co">Name Of Project</label><input type="text" id="ov_co" autocomplete="off">
+<label for="ov_loc">Location</label><input type="text" id="ov_loc" autocomplete="off">
+<label for="ov_nm">Nama</label><input type="text" id="ov_nm" autocomplete="off">
+<label for="sigf">Tanda tangan (Employee)</label><input type="file" id="sigf" accept="image/png,image/jpeg,image/webp">
+<label style="font-weight:400"><input type="checkbox" id="sigw" checked style="width:auto;margin-right:6px">Hapus latar putih otomatis</label>
+<div id="sigp" style="display:none;margin-top:8px;align-items:center;gap:12px"><img id="sigimg" alt="Pratinjau tanda tangan" style="max-height:56px;max-width:140px;border:1px dashed var(--bd);border-radius:6px;background:repeating-conic-gradient(#d9dde5 0% 25%,#fff 0% 50%) 50%/12px 12px"><button type="button" class="sec mini" id="sigdel">Pakai tanda tangan template</button></div>
+<small id="sigst">Memakai tanda tangan dari template. Ukuran disesuaikan otomatis dengan kotak di template.</small></div>
+
+<div class="card"><h2>3. Periode</h2>
 <div class="row"><div><label for="s">Tanggal mulai</label><input type="date" id="s"></div>
 <div><label for="e">Tanggal akhir</label><input type="date" id="e"></div></div>
 <small>Tanggal akhir terisi otomatis (mulai + 1 bulan − 1 hari), bisa diubah.</small></div>
 
-<div class="card"><h2>3. Cuti <small>(opsional)</small></h2>
+<div class="card"><h2>4. Cuti <small>(opsional)</small></h2>
 <div class="row"><div><label for="cs">Dari</label><input type="date" id="cs"></div>
 <div><label for="ce">Sampai</label><input type="date" id="ce"></div></div>
 <small>Hanya bisa memilih tanggal di dalam periode. Hari cuti dibuat merah dengan remarks "Cuti". Sabtu/Minggu tetap "Weekend".</small></div>
 
-<div class="card"><h2>4. Hari libur nasional</h2>
+<div class="card"><h2>5. Hari libur nasional</h2>
 <small>Terisi otomatis dari SKB 3 Menteri (2026–2027), hanya libur nasional (cuti bersama tidak dimerahkan): baris merah, remarks nama libur, jam 00:00, tidak dihitung kehadiran. Jika jatuh di Sabtu/Minggu, remarks tetap "Weekend".</small>
 <div id="hol" style="margin:8px 0;font-size:14px"></div>
 <label for="extra">Libur tambahan <small>(satu baris: YYYY-MM-DD, nama)</small></label>
 <textarea id="extra" rows="3" placeholder="2028-01-01, Tahun Baru 2028 Masehi"></textarea></div>
 
-<div class="card"><h2>5. Remarks kegiatan <small>(opsional)</small></h2>
+<div class="card"><h2>6. Remarks kegiatan <small>(opsional)</small></h2>
 <small>Isi kegiatan untuk hari kerja biasa (bukan tanggal merah). Tanggal hanya bisa dipilih di dalam periode. Kosongkan jika tidak perlu, otomatis "Test log". Satu tanggal: isi "Dari" saja.</small>
 <div id="rem" style="margin-top:8px"></div>
 <button type="button" class="sec mini" id="addrem">+ Tambah remarks</button></div>
 
 <div class="row"><button id="go" disabled>Unduh Excel</button><button id="gopdf" class="sec" disabled>Unduh PDF</button></div>
 <div id="msg"></div>
-<p class="s" style="margin-top:18px;font-size:12px">Versi 10 · template bawaan otomatis terpasang</p>
+<p class="s" style="margin-top:18px;font-size:12px">Versi 12 · template bawaan otomatis terpasang</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -76,7 +86,7 @@ $("e").addEventListener("change",refresh);
 $("f").addEventListener("change",async ev=>{
   tpl=null;$("tplstat").textContent="Belum ada template terpasang.";const f=ev.target.files[0];if(!f)return refresh();
   try{const z=await JSZip.loadAsync(await f.arrayBuffer());
-    if(!z.file("xl/worksheets/sheet1.xml"))throw 0;tpl=z;say("Template terbaca.","ok");$("tplstat").textContent="Template terpasang: "+f.name}
+    if(!z.file("xl/worksheets/sheet1.xml"))throw 0;tpl=z;await loadDefaults();say("Template terbaca.","ok");$("tplstat").textContent="Template terpasang: "+f.name}
   catch(e){say("File bukan template .xlsx yang valid.","er");$("tplstat").textContent="Belum ada template terpasang."}
   refresh()});
 
@@ -166,6 +176,59 @@ function totalFmt(styles,sid){ // format total jam kumulatif [h]:mm (agar >24 ja
   const cnt=xs.length+1,xb2=xb.replace(/count="\d+"/,'count="'+cnt+'"').replace("</cellXfs>",cl+"</cellXfs>");
   return{styles:styles.replace(xb,xb2),sid:String(xs.length)}}
 
+
+// ===== Identitas & tanda tangan opsional =====
+let SIGSRC=null,SIG=null;
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Gambar tidak dapat dibaca."));i.src=src});
+const b64u8=b=>{const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
+async function processSig(){
+  if(!SIGSRC){SIG=null;$("sigp").style.display="none";$("sigst").textContent="Memakai tanda tangan dari template. Ukuran disesuaikan otomatis dengan kotak di template.";return}
+  const img=await loadImg(SIGSRC),sc=Math.min(1,600/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.max(1,Math.round(img.naturalWidth*sc)),h=Math.max(1,Math.round(img.naturalHeight*sc));
+  const cv=document.createElement("canvas");cv.width=w;cv.height=h;const cx=cv.getContext("2d");cx.drawImage(img,0,0,w,h);
+  if($("sigw").checked){const id=cx.getImageData(0,0,w,h),d=id.data;for(let i=0;i<d.length;i+=4){const m=Math.min(d[i],d[i+1],d[i+2]);if(m>225)d[i+3]=0;else if(m>180)d[i+3]=Math.round(d[i+3]*(225-m)/45)}cx.putImageData(id,0,0)}
+  const b64=cv.toDataURL("image/png").split(",")[1];SIG={b64,u8:b64u8(b64),w,h};
+  $("sigimg").src="data:image/png;base64,"+b64;$("sigp").style.display="flex";
+  $("sigst").textContent="Tanda tangan baru dipakai ("+img.naturalWidth+"×"+img.naturalHeight+" px), otomatis diskalakan mengikuti ukuran kotak di template."}
+{const f=typeof document!=="undefined"&&document.getElementById("sigf");if(f){
+  f.addEventListener("change",async ev=>{const file=ev.target.files[0];if(!file){SIGSRC=null;return processSig()}
+    if(!/^image\/(png|jpe?g|webp)$/.test(file.type)){ev.target.value="";return say("Tanda tangan harus berupa gambar PNG, JPG, atau WebP.","er")}
+    if(file.size>10*1048576){ev.target.value="";return say("Ukuran gambar maksimal 10 MB.","er")}
+    try{SIGSRC=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error("Gagal membaca gambar."));r.readAsDataURL(file)});await processSig();say("Tanda tangan siap dipakai.","ok")}
+    catch(e){SIGSRC=null;SIG=null;say("Gagal: "+(e.message||e),"er")}});
+  document.getElementById("sigw").addEventListener("change",()=>processSig().catch(()=>{}));
+  document.getElementById("sigdel").addEventListener("click",()=>{SIGSRC=null;SIG=null;f.value="";processSig()})}}
+async function loadDefaults(){ // tampilkan isi template sebagai placeholder
+  try{const z=tpl,p=Object.keys(z.files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0],s=await z.file(p).async("string");
+    const ss=z.file("xl/sharedStrings.xml")?ssList(await z.file("xl/sharedStrings.xml").async("string")):[];
+    $("ov_co").placeholder=cellText(s,ss,"A5");$("ov_loc").placeholder=cellText(s,ss,"B5");$("ov_nm").placeholder=cellText(s,ss,"E5")}catch(_){}}
+async function patchSignature(z){ // ganti gambar tanda tangan pada template Excel, aspek rasio dijaga dengan padding
+  const dp=Object.keys(z.files).find(n=>/^xl\/drawings\/drawing\d+\.xml$/.test(n));
+  if(!dp)throw new Error("Template tidak memiliki gambar tanda tangan untuk diganti.");
+  let d=await z.file(dp).async("string");
+  const as=(d.match(/<xdr:(?:twoCellAnchor|oneCellAnchor)\b[\s\S]*?<\/xdr:(?:twoCellAnchor|oneCellAnchor)>/g)||[]).map(a=>({a,row:+((a.match(/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/)||[])[1]||0)})).filter(x=>x.row>=20).sort((x,y)=>y.row-x.row);
+  if(!as.length)throw new Error("Posisi tanda tangan pada template tidak ditemukan.");
+  let A=as[0].a;const rid=(A.match(/r:embed="([^"]+)"/)||[])[1];let ex=A.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+  const fr=A.match(/<xdr:from><xdr:col>(\d+)<\/xdr:col><xdr:colOff>(-?\d+)<\/xdr:colOff><xdr:row>(\d+)<\/xdr:row><xdr:rowOff>(-?\d+)<\/xdr:rowOff><\/xdr:from><xdr:to><xdr:col>(\d+)<\/xdr:col><xdr:colOff>(-?\d+)<\/xdr:colOff><xdr:row>(\d+)<\/xdr:row><xdr:rowOff>(-?\d+)<\/xdr:rowOff><\/xdr:to>/);
+  if(fr&&fr[1]==="10"&&fr[5]==="10"&&fr[3]==="42"&&fr[7]==="45"){ // kotak tanda tangan pada template: perlebar di dalam sel K, di bawah teks "Employee"
+    const E=12700,x0=Math.round(5.6*E),x1=Math.round(81.6*E),cx=x1-x0,cy=Math.round(31.8*E);
+    const A1=A.replace(fr[0],'<xdr:from><xdr:col>10</xdr:col><xdr:colOff>'+x0+'</xdr:colOff><xdr:row>43</xdr:row><xdr:rowOff>8890</xdr:rowOff></xdr:from><xdr:to><xdr:col>10</xdr:col><xdr:colOff>'+x1+'</xdr:colOff><xdr:row>45</xdr:row><xdr:rowOff>127000</xdr:rowOff></xdr:to>')
+      .replace(/<a:ext cx="\d+" cy="\d+"/,'<a:ext cx="'+cx+'" cy="'+cy+'"');
+    d=d.replace(A,A1);A=A1;ex=A.match(/<a:ext cx="(\d+)" cy="(\d+)"/)}
+  const B=ex?+ex[1]/+ex[2]:1.19,ar=SIG.w/SIG.h;let rect;
+  if(ar<B){const q=Math.round((B/ar-1)/2*100000);rect='l="-'+q+'" t="0" r="-'+q+'" b="0"'}else{const q=Math.round((ar/B-1)/2*100000);rect='l="0" t="-'+q+'" r="0" b="-'+q+'"'}
+  let A2=/<a:srcRect\b[^>]*\/>/.test(A)?A.replace(/<a:srcRect\b[^>]*\/>/,'<a:srcRect '+rect+'/>'):A.replace(/(<a:blip\b[^>]*?(?:\/>|>[\s\S]*?<\/a:blip>))/,'$1<a:srcRect '+rect+'/>');
+  z.file(dp,d.replace(A,A2));
+  const rp=dp.replace("drawings/","drawings/_rels/")+".rels";let rl=await z.file(rp).async("string");
+  const rm=rl.match(new RegExp('<Relationship\\b[^>]*Id="'+rid+'"[^>]*/>'));if(!rm)throw new Error("Relasi gambar tanda tangan tidak ditemukan.");
+  const old=(rm[0].match(/Target="([^"]+)"/)||[])[1],oldPath="xl/"+old.replace(/^\.\.\//,"");
+  z.file(rp,rl.replace(rm[0],rm[0].replace(/Target="[^"]+"/,'Target="../media/signature_custom.png"')));
+  if(z.file(oldPath)&&!new RegExp('Target="'+old.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'"').test(rl.replace(rm[0],"")))z.remove(oldPath);
+  z.file("xl/media/signature_custom.png",SIG.u8);
+  let ct=await z.file("[Content_Types].xml").async("string");
+  ct=ct.replace(new RegExp('<Override PartName="/'+oldPath.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'"[^>]*/>'),"");
+  if(!/Extension="png"/i.test(ct))ct=ct.replace(/(<Types\b[^>]*>)/,'$1<Default Extension="png" ContentType="image/png"/>');
+  z.file("[Content_Types].xml",ct)}
+
 async function build(){
   const sd=parse($("s").value),ed=parse($("e").value);
   const days=Math.round((ed-sd)/864e5)+1,cap=LAST-FIRST+1;
@@ -184,6 +247,9 @@ async function build(){
   const ss=z.file("xl/sharedStrings.xml")?ssList(await z.file("xl/sharedStrings.xml").async("string")):[];
   const{map:st,def}=readTemplate(s,styles);
   const meta={co:cellText(s,ss,"A5"),loc:cellText(s,ss,"B5"),nm:cellText(s,ss,"E5")};
+  for(const[k,id,ref]of[["co","ov_co","A5"],["loc","ov_loc","B5"],["nm","ov_nm","E5"]]){const v=($(id).value||"").trim();
+    if(v){meta[k]=v;s=setCell(s,ref,c=>inl(ref,styleOf(c),v))}}
+  if(SIG)await patchSignature(z);
   s=setCell(s,"L5",c=>c.replace(/<v>[^<]*<\/v>/,"<v>"+serial(sd)+"</v>"));
   s=setCell(s,"M5",c=>c.replace(/<v>[^<]*<\/v>/,"<v>"+serial(ed)+"</v>"));
   let hadir=0,sumH=0,nHol=0;const hrs=+def.D-+def.B-+def.H,rows=[];
@@ -215,7 +281,7 @@ async function build(){
   z.file("xl/workbook.xml",wb);
   // lebar kolom & gambar (logo = png, tanda tangan = jpg) untuk PDF
   const cw=Array(13).fill(0);(s.match(/<col\b[^>]*>/g)||[]).forEach(c=>{const a=+c.match(/min="(\d+)"/)[1],b=+c.match(/max="(\d+)"/)[1],w=+c.match(/width="([\d.]+)"/)[1];for(let k=a;k<=b&&k<=13;k++)cw[k-1]=w});
-  const imgs={};for(const n of Object.keys(z.files).filter(n=>/^xl\/media\//.test(n))){const ext=n.split(".").pop().toLowerCase();imgs[ext==="png"?"logo":"sig"]={ext,b64:await z.file(n).async("base64"),u8:await z.file(n).async("uint8array")}}
+  const imgs={};for(const n of Object.keys(z.files).filter(n=>/^xl\/media\/[^\/]+$/.test(n))){const ext=n.split(".").pop().toLowerCase();imgs[/signature_custom/.test(n)?"sig":ext==="png"?"logo":"sig"]={ext,b64:await z.file(n).async("base64"),u8:await z.file(n).async("uint8array"),custom:/signature_custom/.test(n)}}
   return{z,sd,ed,hadir,sumH,nHol,rows,meta,cw,imgs,name:"Form Timesheet Gajian "+fmt(sd)+" - "+fmt(ed)+"_1"}}
 
 function imgSize(u){if(u[0]===0x89)return[(u[16]<<24|u[17]<<16|u[18]<<8|u[19]),(u[20]<<24|u[21]<<16|u[22]<<8|u[23])];
@@ -236,7 +302,9 @@ function makePdf(M){
   doc.addFileToVFS("Carlito-Bold.ttf",FONT_B);doc.addFont("Carlito-Bold.ttf","Carlito","bold");
   GEO.R.forEach(r=>{doc.setFillColor(r[4],r[5],r[6]);doc.rect(r[0],r[1],r[2]-r[0],r[3]-r[1],"F")});
   // tanda tangan: dipotong (crop) tepat di dalam kotak sel, digambar sebelum garis agar garis tetap utuh
-  if(M.imgs.sig){doc.saveGraphicsState();doc.rect(372.2,670.6,38.1,31.8,null);doc.clip();doc.discardPath();
+  if(M.imgs.sig&&M.imgs.sig.custom){const bx=353.8,by=670.8,bw=76,bh=31.8,[iw,ih]=imgSize(M.imgs.sig.u8),k=Math.min(bw/iw,bh/ih),w=iw*k,hh=ih*k;
+    doc.addImage("data:image/png;base64,"+M.imgs.sig.b64,"PNG",bx+(bw-w)/2,by+(bh-hh)/2,w,hh)}
+  else if(M.imgs.sig){doc.saveGraphicsState();doc.rect(372.2,670.6,38.1,31.8,null);doc.clip();doc.discardPath();
     doc.addImage("data:image/jpeg;base64,"+M.imgs.sig.b64,"JPEG",375.8,662.2,34.5,50.5);doc.restoreGraphicsState()}
   doc.setLineWidth(.75);
   GEO.L.forEach(l=>{if(l[4])doc.setDrawColor(171,171,171);else doc.setDrawColor(0,0,0);doc.line(l[0],l[1],l[2],l[3])});
@@ -248,7 +316,7 @@ function makePdf(M){
   // header (label)
   T("Name",CX.A,44.67,{b:1,c:WH});T("Of Project",CX.A,56.66,{b:1,c:WH});T("Location",CX.BD,50.68,{b:1,c:WH});T("Name",CX.EJ,50.68,{b:1,c:WH});T("Period",CX.LM,50.68,{b:1,c:WH});
   // header (isi dari template)
-  T(M.meta.co,CX.A,75.4,{b:1,c:WH});T(M.meta.loc,CX.BD,75.4,{b:1,c:WH});T(M.meta.nm,CX.EJ,75.4,{b:1,c:WH});
+  T(M.meta.co,CX.A,75.4,{b:1,c:WH,mw:74});T(M.meta.loc,CX.BD,75.4,{b:1,c:WH,mw:76});T(M.meta.nm,CX.EJ,75.4,{b:1,c:WH,mw:165});
   T(pfmt(M.sd),CX.L,75.4,{b:1,c:WH});T(pfmt(M.ed),CX.M,75.4,{b:1,c:WH});
   // header tabel
   T("Working Hour",CX.BD,98.99,{b:1,c:WH});T("Over Time (OT)",211.25,98.99,{b:1,c:WH});T("Total",CX.I,98.99,{b:1,c:WH});T("Total",CX.J,98.99,{b:1,c:WH});
@@ -289,7 +357,7 @@ $("dltpl").addEventListener("click",async()=>{
 
 async function useBuiltin(auto){
   try{const bin=atob(TPL_B64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
-    tpl=await JSZip.loadAsync(u);try{$("f").value=""}catch(_){}
+    tpl=await JSZip.loadAsync(u);try{$("f").value=""}catch(_){}await loadDefaults();
     $("tplstat").textContent="Template terpasang: template bawaan (Form Timesheet Gajian)";
     say(auto?"Template bawaan sudah terpasang otomatis. Tinggal pilih tanggal mulai.":"Template bawaan terpasang. Lanjut isi periode.","ok");refresh()
   }catch(e){say("Gagal memasang template: "+(e.message||e),"er")}}
