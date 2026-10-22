@@ -38,7 +38,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="card"><h2>3. Cuti <small>(opsional)</small></h2>
 <div class="row"><div><label for="cs">Dari</label><input type="date" id="cs"></div>
 <div><label for="ce">Sampai</label><input type="date" id="ce"></div></div>
-<small>Hari cuti dibuat merah dengan remarks "Cuti". Sabtu/Minggu tetap "Weekend".</small></div>
+<small>Hanya bisa memilih tanggal di dalam periode. Hari cuti dibuat merah dengan remarks "Cuti". Sabtu/Minggu tetap "Weekend".</small></div>
 
 <div class="card"><h2>4. Hari libur nasional</h2>
 <small>Terisi otomatis dari SKB 3 Menteri (2026–2027), hanya libur nasional (cuti bersama tidak dimerahkan): baris merah, remarks nama libur, jam 00:00, tidak dihitung kehadiran. Jika jatuh di Sabtu/Minggu, remarks tetap "Weekend".</small>
@@ -47,13 +47,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <textarea id="extra" rows="3" placeholder="2028-01-01, Tahun Baru 2028 Masehi"></textarea></div>
 
 <div class="card"><h2>5. Remarks kegiatan <small>(opsional)</small></h2>
-<small>Isi kegiatan untuk hari kerja biasa (bukan tanggal merah). Kosongkan jika tidak perlu, otomatis "Test log". Satu tanggal: isi "Dari" saja.</small>
+<small>Isi kegiatan untuk hari kerja biasa (bukan tanggal merah). Tanggal hanya bisa dipilih di dalam periode. Kosongkan jika tidak perlu, otomatis "Test log". Satu tanggal: isi "Dari" saja.</small>
 <div id="rem" style="margin-top:8px"></div>
 <button type="button" class="sec mini" id="addrem">+ Tambah remarks</button></div>
 
 <div class="row"><button id="go" disabled>Unduh Excel</button><button id="gopdf" class="sec" disabled>Unduh PDF</button></div>
 <div id="msg"></div>
-<p class="s" style="margin-top:18px;font-size:12px">Versi 9 · template bawaan otomatis terpasang</p>
+<p class="s" style="margin-top:18px;font-size:12px">Versi 10 · template bawaan otomatis terpasang</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -67,7 +67,7 @@ const parse=v=>{const[a,b,c]=v.split("-").map(Number);return new Date(Date.UTC(a
 const serial=d=>Math.round((d-Date.UTC(1899,11,30))/864e5);
 const fmt=d=>d.getUTCDate()+" "+BLN[d.getUTCMonth()]+" "+d.getUTCFullYear();
 function say(t,c){const m=$("msg");m.textContent=t;m.className=c||""}
-function refresh(){$("go").disabled=$("gopdf").disabled=!(tpl&&$("s").value&&$("e").value);preview()}
+function refresh(){$("go").disabled=$("gopdf").disabled=!(tpl&&$("s").value&&$("e").value);applyLimits();preview()}
 ["extra","cs","ce"].forEach(i=>$(i).addEventListener("input",refresh));
 $("s").addEventListener("change",()=>{
   const d=parse($("s").value);const e=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate()-1));
@@ -90,11 +90,22 @@ const REM=[];
 function renderRem(){const box=document.getElementById("rem");if(!box)return;box.innerHTML="";
   REM.forEach((o,i)=>{const d=document.createElement("div");d.className="rr";
     const mk=(type,ph,val,cls,fn)=>{const e=document.createElement("input");e.type=type;e.placeholder=ph;e.value=val;if(cls)e.className=cls;e.addEventListener("input",()=>fn(e.value));return e};
-    const l1=document.createElement("label");l1.textContent="Dari";l1.appendChild(mk("date","",o.f,"",v=>{o.f=v}));
+    const l1=document.createElement("label");l1.textContent="Dari";l1.appendChild(mk("date","",o.f,"",v=>{o.f=v;applyLimits()}));
     const l2=document.createElement("label");l2.textContent="Sampai (opsional)";l2.appendChild(mk("date","",o.t,"",v=>{o.t=v}));
     const t=mk("text","Kegiatan, mis. Instalasi server",o.x,"t",v=>{o.x=v});
     const del=document.createElement("button");del.type="button";del.className="sec mini";del.textContent="Hapus";del.addEventListener("click",()=>{REM.splice(i,1);renderRem()});
-    d.append(l1,l2,t,del);box.appendChild(d)})}
+    d.append(l1,l2,t,del);box.appendChild(d)});applyLimits()}
+
+// Batasi pilihan tanggal cuti & remarks hanya di dalam periode
+function applyLimits(){
+  if(typeof document==="undefined")return;
+  const s=$("s").value,e=$("e").value;let cleared=false;
+  const lim=(el,min,max)=>{if(!el)return;if(min)el.min=min;else el.removeAttribute("min");if(max)el.max=max;else el.removeAttribute("max");
+    if(el.value&&((min&&el.value<min)||(max&&el.value>max))){el.value="";cleared=true}};
+  const cs=$("cs"),ce=$("ce");lim(cs,s,e);lim(ce,cs.value||s,e);
+  document.querySelectorAll("#rem .rr").forEach((row,i)=>{const[f,t]=row.querySelectorAll('input[type="date"]');
+    lim(f,s,e);lim(t,f.value||s,e);if(REM[i]){REM[i].f=f.value;REM[i].t=t.value}});
+  if(cleared)say("Tanggal cuti/remarks yang berada di luar periode sudah dikosongkan.","er")}
 function customRemark(key){let r="Test log";for(const o of REM){const f=o.f,t=o.t||o.f;if(f&&o.x&&o.x.trim()&&key>=f&&key<=t)r=o.x.trim()}return r}
 {const b=typeof document!=="undefined"&&document.getElementById("addrem");if(b)b.addEventListener("click",()=>{REM.push({f:"",t:"",x:""});renderRem()})}
 function holidays(){
@@ -163,6 +174,9 @@ async function build(){
   let cs=$("cs").value?parse($("cs").value):null,ce=$("ce").value?parse($("ce").value):cs;
   if(cs&&ce<cs)throw new Error("Tanggal cuti 'Sampai' harus setelah 'Dari'.");
   for(const o of REM)if(o.f&&o.t&&o.t<o.f)throw new Error("Remarks \""+(o.x||"")+"\": tanggal 'Sampai' harus setelah 'Dari'.");
+  const lo=iso(sd),hi=iso(ed),fd=d=>d.slice(8,10)+"-"+d.slice(5,7)+"-"+d.slice(0,4);
+  if(cs&&(iso(cs)<lo||iso(ce)>hi))throw new Error("Tanggal cuti harus berada di dalam periode ("+fd(lo)+" s/d "+fd(hi)+").");
+  for(const o of REM)if(o.f&&o.x&&(o.f<lo||(o.t||o.f)>hi))throw new Error("Remarks \""+o.x+"\" harus berada di dalam periode ("+fd(lo)+" s/d "+fd(hi)+").");
   const hm=holidays();
   const z=await JSZip.loadAsync(await tpl.generateAsync({type:"arraybuffer"}));
   const path=Object.keys(z.files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];
