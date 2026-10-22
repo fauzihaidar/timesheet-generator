@@ -53,7 +53,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <div class="row"><button id="go" disabled>Unduh Excel</button><button id="gopdf" class="sec" disabled>Unduh PDF</button></div>
 <div id="msg"></div>
-<p class="s" style="margin-top:18px;font-size:12px">Versi 8 · template bawaan otomatis terpasang</p>
+<p class="s" style="margin-top:18px;font-size:12px">Versi 9 · template bawaan otomatis terpasang</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -289,9 +289,7 @@ async function run(kind){
     let data,name;
     if(kind==="pdf"){data=makePdf(M);name=M.name+".pdf"}
     else{data=await M.z.generateAsync({type:"arraybuffer",compression:"DEFLATE"});name=M.name+".xlsx"}
-    const dl=await claude.use("downloads");
-    if(!dl)return say("Fitur unduh tidak tersedia di tampilan ini. Buka artifact ini langsung di claude.ai.","er");
-    await dl.save({filename:name,data});
+    await saveFile(name,data);
     say("Selesai: "+name+"\nTotal Kehadiran: "+M.hadir+" hari (libur nasional hari kerja: "+M.nHol+").","ok");
   }catch(e){if(e&&e.code==="declined")return say("Unduhan dibatalkan.");say("Gagal: "+(e.message||e),"er")}}
 $("go").addEventListener("click",()=>run("xlsx"));
