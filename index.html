@@ -57,13 +57,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <textarea id="extra" rows="3" placeholder="2028-01-01, Tahun Baru 2028 Masehi"></textarea></div>
 
 <div class="card"><h2>6. Remarks kegiatan <small>(opsional)</small></h2>
-<small>Isi kegiatan untuk hari kerja biasa (bukan tanggal merah). Tanggal hanya bisa dipilih di dalam periode. Kosongkan jika tidak perlu, otomatis "Test log". Satu tanggal: isi "Dari" saja.</small>
+<small>Isi kegiatan untuk hari kerja biasa (bukan tanggal merah). Tanggal hanya bisa dipilih di dalam periode. Teks panjang otomatis turun ke baris berikutnya (wrap), maksimal 200 karakter. Kosongkan jika tidak perlu, otomatis "Testing Backlog". Satu tanggal: isi "Dari" saja.</small>
 <div id="rem" style="margin-top:8px"></div>
 <button type="button" class="sec mini" id="addrem">+ Tambah remarks</button></div>
 
 <div class="row"><button id="go" disabled>Unduh Excel</button><button id="gopdf" class="sec" disabled>Unduh PDF</button></div>
 <div id="msg"></div>
-<p class="s" style="margin-top:18px;font-size:12px">Versi 12 · template bawaan otomatis terpasang</p>
+<p class="s" style="margin-top:18px;font-size:12px">Versi 14 · template bawaan otomatis terpasang</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -99,7 +99,7 @@ const HOL={"2026-12-25":"Kelahiran Yesus Kristus (Natal)",
 const REM=[];
 function renderRem(){const box=document.getElementById("rem");if(!box)return;box.innerHTML="";
   REM.forEach((o,i)=>{const d=document.createElement("div");d.className="rr";
-    const mk=(type,ph,val,cls,fn)=>{const e=document.createElement("input");e.type=type;e.placeholder=ph;e.value=val;if(cls)e.className=cls;e.addEventListener("input",()=>fn(e.value));return e};
+    const mk=(type,ph,val,cls,fn)=>{const e=document.createElement("input");e.type=type;if(type==="text")e.maxLength=200;e.placeholder=ph;e.value=val;if(cls)e.className=cls;e.addEventListener("input",()=>fn(e.value));return e};
     const l1=document.createElement("label");l1.textContent="Dari";l1.appendChild(mk("date","",o.f,"",v=>{o.f=v;applyLimits()}));
     const l2=document.createElement("label");l2.textContent="Sampai (opsional)";l2.appendChild(mk("date","",o.t,"",v=>{o.t=v}));
     const t=mk("text","Kegiatan, mis. Instalasi server",o.x,"t",v=>{o.x=v});
@@ -116,7 +116,7 @@ function applyLimits(){
   document.querySelectorAll("#rem .rr").forEach((row,i)=>{const[f,t]=row.querySelectorAll('input[type="date"]');
     lim(f,s,e);lim(t,f.value||s,e);if(REM[i]){REM[i].f=f.value;REM[i].t=t.value}});
   if(cleared)say("Tanggal cuti/remarks yang berada di luar periode sudah dikosongkan.","er")}
-function customRemark(key){let r="Test log";for(const o of REM){const f=o.f,t=o.t||o.f;if(f&&o.x&&o.x.trim()&&key>=f&&key<=t)r=o.x.trim()}return r}
+function customRemark(key){let r="Testing Backlog";for(const o of REM){const f=o.f,t=o.t||o.f;if(f&&o.x&&o.x.trim()&&key>=f&&key<=t)r=o.x.trim()}return r}
 {const b=typeof document!=="undefined"&&document.getElementById("addrem");if(b)b.addEventListener("click",()=>{REM.push({f:"",t:"",x:""});renderRem()})}
 function holidays(){
   const m=Object.assign({},HOL);
@@ -144,9 +144,9 @@ function redStyles(styles){
   const xfs=xb.match(/<xf\b[^>]*>/g)||[];const red=new Set();
   xfs.forEach((x,i)=>{const f=x.match(/fontId="(\d+)"/);if(!f)return;if(/<color[^>]*rgb="FFFF0000"/i.test(fonts[+f[1]]||""))red.add(String(i))});
   return red}
-function readTemplate(s,styles){ // gaya baris merah/hitam + jam kerja default, langsung dari template
+function readTemplate(s,styles,tl){ // gaya baris merah/hitam + jam kerja default, langsung dari template
   const red=redStyles(styles),map={r:{},b:{}},def={B:"0.333333333333333",D:"0.708333333333333",E:"0",G:"0",H:"0.0416666666666667",J:"0"};let gotDef=false;
-  for(let r=FIRST;r<=LAST;r++){
+  for(let r=FIRST;r<=tl;r++){
     const a=findCell(s,"A"+r);if(!a)continue;
     const kind=red.has(styleOf(a[0]))?"r":"b";
     for(const c of COLS){const m=findCell(s,c+r);if(m&&map[kind][c]===undefined)map[kind][c]=styleOf(m[0])}
@@ -205,13 +205,13 @@ async function patchSignature(z){ // ganti gambar tanda tangan pada template Exc
   const dp=Object.keys(z.files).find(n=>/^xl\/drawings\/drawing\d+\.xml$/.test(n));
   if(!dp)throw new Error("Template tidak memiliki gambar tanda tangan untuk diganti.");
   let d=await z.file(dp).async("string");
-  const as=(d.match(/<xdr:(?:twoCellAnchor|oneCellAnchor)\b[\s\S]*?<\/xdr:(?:twoCellAnchor|oneCellAnchor)>/g)||[]).map(a=>({a,row:+((a.match(/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/)||[])[1]||0)})).filter(x=>x.row>=20).sort((x,y)=>y.row-x.row);
+  const as=(d.match(/<xdr:(?:twoCellAnchor|oneCellAnchor)\b[\s\S]*?<\/xdr:(?:twoCellAnchor|oneCellAnchor)>/g)||[]).map(a=>({a,row:+((a.match(/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/)||[])[1]||0)})).filter(x=>x.row>=8).sort((x,y)=>y.row-x.row);
   if(!as.length)throw new Error("Posisi tanda tangan pada template tidak ditemukan.");
   let A=as[0].a;const rid=(A.match(/r:embed="([^"]+)"/)||[])[1];let ex=A.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
   const fr=A.match(/<xdr:from><xdr:col>(\d+)<\/xdr:col><xdr:colOff>(-?\d+)<\/xdr:colOff><xdr:row>(\d+)<\/xdr:row><xdr:rowOff>(-?\d+)<\/xdr:rowOff><\/xdr:from><xdr:to><xdr:col>(\d+)<\/xdr:col><xdr:colOff>(-?\d+)<\/xdr:colOff><xdr:row>(\d+)<\/xdr:row><xdr:rowOff>(-?\d+)<\/xdr:rowOff><\/xdr:to>/);
-  if(fr&&fr[1]==="10"&&fr[5]==="10"&&fr[3]==="42"&&fr[7]==="45"){ // kotak tanda tangan pada template: perlebar di dalam sel K, di bawah teks "Employee"
+  if(fr&&fr[1]==="10"&&fr[5]==="10"&&(+fr[7])-(+fr[3])===3){ // kotak tanda tangan pada template: perlebar di dalam sel K, di bawah teks "Employee"
     const E=12700,x0=Math.round(5.6*E),x1=Math.round(81.6*E),cx=x1-x0,cy=Math.round(31.8*E);
-    const A1=A.replace(fr[0],'<xdr:from><xdr:col>10</xdr:col><xdr:colOff>'+x0+'</xdr:colOff><xdr:row>43</xdr:row><xdr:rowOff>8890</xdr:rowOff></xdr:from><xdr:to><xdr:col>10</xdr:col><xdr:colOff>'+x1+'</xdr:colOff><xdr:row>45</xdr:row><xdr:rowOff>127000</xdr:rowOff></xdr:to>')
+    const A1=A.replace(fr[0],'<xdr:from><xdr:col>10</xdr:col><xdr:colOff>'+x0+'</xdr:colOff><xdr:row>'+(+fr[3]+1)+'</xdr:row><xdr:rowOff>8890</xdr:rowOff></xdr:from><xdr:to><xdr:col>10</xdr:col><xdr:colOff>'+x1+'</xdr:colOff><xdr:row>'+fr[7]+'</xdr:row><xdr:rowOff>127000</xdr:rowOff></xdr:to>')
       .replace(/<a:ext cx="\d+" cy="\d+"/,'<a:ext cx="'+cx+'" cy="'+cy+'"');
     d=d.replace(A,A1);A=A1;ex=A.match(/<a:ext cx="(\d+)" cy="(\d+)"/)}
   const B=ex?+ex[1]/+ex[2]:1.19,ar=SIG.w/SIG.h;let rect;
@@ -229,6 +229,68 @@ async function patchSignature(z){ // ganti gambar tanda tangan pada template Exc
   if(!/Extension="png"/i.test(ct))ct=ct.replace(/(<Types\b[^>]*>)/,'$1<Default Extension="png" ContentType="image/png"/>');
   z.file("[Content_Types].xml",ct)}
 
+// Hapus tebal (bold) dari gaya remarks hitam -> gaya baru; null jika sudah tidak bold
+function unboldStyle(styles,sid){
+  const fb=styles.match(/<fonts\b[^>]*>[\s\S]*?<\/fonts>/);if(!fb)return null;const fo=fb[0].match(/^<fonts\b[^>]*>/)[0];
+  const fonts=fb[0].slice(fo.length,fb[0].length-8).match(/<font\b[^>]*?(?:\/>|>[\s\S]*?<\/font>)/g)||[];
+  const xb=styles.match(/<cellXfs\b[^>]*>[\s\S]*?<\/cellXfs>/)[0],xo=xb.match(/^<cellXfs\b[^>]*>/)[0];
+  const xs=xb.slice(xo.length,xb.length-10).match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g)||[],x=xs[+sid];if(!x)return null;
+  const fm=x.match(/fontId="(\d+)"/);if(!fm)return null;const f=fonts[+fm[1]];if(!f||!/<b\b/.test(f))return null;
+  const nf=f.replace(/<b\b[^>]*\/>/,"").replace(/<b>\s*<\/b>/,"");
+  let nx=x.replace(/fontId="\d+"/,'fontId="'+fonts.length+'"');if(!/applyFont=/.test(nx))nx=nx.replace(/^<xf/,'<xf applyFont="1"');
+  const nfb=fo.replace(/count="\d+"/,'count="'+(fonts.length+1)+'"')+fonts.join("")+nf+"</fonts>";
+  const nxb=xo.replace(/count="\d+"/,'count="'+(xs.length+1)+'"')+xs.join("")+nx+"</cellXfs>";
+  return{styles:styles.replace(fb[0],()=>nfb).replace(xb,()=>nxb),sid:String(xs.length)}}
+// Cari baris data terakhir pada template (baris tepat di atas "CUT - OFF")
+function findLast(s,ss){for(const m of s.matchAll(/<c r="K(\d+)"[^>]*>[\s\S]*?<\/c>/g)){
+    const t=cellText(s,ss,"K"+m[1]);if(/^\s*cut\s*-\s*off\s*$/i.test(t))return+m[1]-1}return LAST}
+// Sesuaikan jumlah baris tanggal pada template dengan panjang periode (hapus/tambah baris + geser semua yang di bawahnya)
+async function resizeRows(z,s,TL,days){
+  const NL=FIRST-1+days,dl=NL-TL;if(!dl)return s;
+  const map=r=>r>=1048576?r:r>TL?r+dl:(dl<0&&r>NL)?NL:r;
+  const sh=t=>t.replace(/(^|[^A-Za-z0-9_.$!'"])(\$?[A-Z]{1,3}\$?)(\d+)(?![\d(A-Za-z_])/g,(m,p,c,n)=>p+c+map(+n));
+  s=s.replace(/<row\b[^>]*?(?:\/>|>[\s\S]*?<\/row>)/g,row=>{
+    const r=+row.match(/<row\b[^>]*?\br="(\d+)"/)[1];if(r>=1048576)return row;
+    if(dl<0&&r>NL&&r<=TL)return"";
+    const nr=r>TL?r+dl:r,setR=(x,n)=>x.replace(/(<row\b[^>]*?\br=")\d+/,"$1"+n).replace(/(<c\b[^>]*?\br="[A-Z]+)\d+(")/g,"$1"+n+"$2");
+    let out=setR(row,nr).replace(/(<f\b[^>]*>)([^<]*)(<\/f>)/g,(m,a,t,b)=>a+sh(t)+b);
+    if(dl>0&&r===TL){let add="";for(let k=1;k<=dl;k++)add+=setR(row,TL+k);out+=add}
+    return out});
+  s=s.replace(/<mergeCells\b[^>]*>[\s\S]*?<\/mergeCells>/,blk=>{
+    const out=[];let hasK=false;
+    for(const m of blk.match(/<mergeCell\b[^>]*\/>/g)||[]){const ref=m.match(/ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/);if(!ref){out.push(m);continue}
+      let r1=+ref[2],r2=+ref[4];if(dl<0&&r1>NL&&r1<=TL&&r2>NL&&r2<=TL)continue;if(ref[1]==="K"&&ref[3]==="M"&&r1===TL&&r2===TL)hasK=true;
+      out.push('<mergeCell ref="'+ref[1]+map(r1)+":"+ref[3]+map(r2)+'"/>')}
+    if(dl>0&&hasK)for(let k=1;k<=dl;k++)out.push('<mergeCell ref="K'+(TL+k)+":M"+(TL+k)+'"/>');
+    return'<mergeCells count="'+out.length+'">'+out.join("")+"</mergeCells>"});
+  s=s.replace(/(<selection\b[^>]*?)activeCell="[^"]*"([^>]*?)sqref="[^"]*"/,'$1activeCell="A1"$2sqref="A1"');
+  let wb=await z.file("xl/workbook.xml").async("string");
+  wb=wb.replace(/(<definedName\b[^>]*>)([^<]*)(<\/definedName>)/g,(m,a,t,b)=>a+t.replace(/(\$[A-Z]{1,3}\$)(\d+)/g,(mm,c,n)=>c+map(+n))+b);z.file("xl/workbook.xml",wb);
+  const dp=Object.keys(z.files).find(n=>/^xl\/drawings\/drawing\d+\.xml$/.test(n));
+  if(dp){let d=await z.file(dp).async("string");z.file(dp,d.replace(/<xdr:row>(\d+)<\/xdr:row>/g,(m,n)=>"<xdr:row>"+(+n+1>TL?+n+dl:n)+"</xdr:row>"))}
+  return s}
+
+// ===== Wrap text pada Activity/Remark: tinggi baris menyesuaikan jumlah baris teks =====
+const LH=9.8,PAD=3; // tinggi per baris teks (pt) 8pt dan padding
+let _md=null;
+function wrapLines(text,bold){
+  if(!_md){_md=new window.jspdf.jsPDF({unit:"pt",format:"letter"});
+    _md.addFileToVFS("Carlito-Regular.ttf",FONT_R);_md.addFont("Carlito-Regular.ttf","Carlito","normal");
+    _md.addFileToVFS("Carlito-Bold.ttf",FONT_B);_md.addFont("Carlito-Bold.ttf","Carlito","bold")}
+  _md.setFont("Carlito",bold?"bold":"normal");_md.setFontSize(8);
+  const l=_md.splitTextToSize(String(text),222);return l.length?l:[""]}
+function setRowHt(s,r,ht){return s.replace(new RegExp('<row\\b[^>]*?\\br="'+r+'"[^>]*>'),tag=>{
+  let t=tag.replace(/\sht="[^"]*"/,"").replace(/\scustomHeight="[^"]*"/,"");return t.replace(/\/?>$/,m=>' ht="'+ht+'" customHeight="1"'+m)})}
+function wrapStyle(styles,sid){ // gaya sel remarks dengan wrapText
+  const xb=styles.match(/<cellXfs\b[^>]*>[\s\S]*?<\/cellXfs>/)[0],xo=xb.match(/^<cellXfs\b[^>]*>/)[0];
+  const xs=xb.slice(xo.length,xb.length-10).match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g)||[],x=xs[+sid];
+  if(!x||/wrapText="(1|true)"/.test(x))return null;let nx;
+  if(/<alignment\b/.test(x))nx=x.replace(/<alignment\b([^>]*?)(\/?)>/,(m,a,sl)=>"<alignment"+(/wrapText=/.test(a)?a.replace(/wrapText="[^"]*"/,'wrapText="1"'):a+' wrapText="1"')+sl+">");
+  else if(/\/>$/.test(x))nx=x.replace(/\/>$/,'><alignment wrapText="1"/></xf>');else nx=x.replace(/(<xf\b[^>]*>)/,'$1<alignment wrapText="1"/>');
+  nx=/applyAlignment=/.test(nx)?nx.replace(/applyAlignment="[^"]*"/,'applyAlignment="1"'):nx.replace(/^<xf/,'<xf applyAlignment="1"');
+  const nxb=xo.replace(/count="\d+"/,'count="'+(xs.length+1)+'"')+xs.join("")+nx+"</cellXfs>";
+  return{styles:styles.replace(xb,()=>nxb),sid:String(xs.length)}}
+
 async function build(){
   const sd=parse($("s").value),ed=parse($("e").value);
   const days=Math.round((ed-sd)/864e5)+1,cap=LAST-FIRST+1;
@@ -245,17 +307,21 @@ async function build(){
   const path=Object.keys(z.files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];
   let s=await z.file(path).async("string"),styles=await z.file("xl/styles.xml").async("string");
   const ss=z.file("xl/sharedStrings.xml")?ssList(await z.file("xl/sharedStrings.xml").async("string")):[];
-  const{map:st,def}=readTemplate(s,styles);
+  const TL=findLast(s,ss),{map:st,def}=readTemplate(s,styles,TL);
+  {const ub=unboldStyle(styles,st.b.K);if(ub){styles=ub.styles;st.b.K=ub.sid}} // remarks hari kerja (hitam) tidak bold
+  for(const k of["b","r"]){const w=wrapStyle(styles,st[k].K);if(w){styles=w.styles;st[k].K=w.sid}} // wrap text
+  const CH=RB.slice(1).map((v,i)=>+(v-RB[i]).toFixed(2)); // tinggi baris standar template
   const meta={co:cellText(s,ss,"A5"),loc:cellText(s,ss,"B5"),nm:cellText(s,ss,"E5")};
   for(const[k,id,ref]of[["co","ov_co","A5"],["loc","ov_loc","B5"],["nm","ov_nm","E5"]]){const v=($(id).value||"").trim();
     if(v){meta[k]=v;s=setCell(s,ref,c=>inl(ref,styleOf(c),v))}}
+  s=await resizeRows(z,s,TL,days);
   if(SIG)await patchSignature(z);
   s=setCell(s,"L5",c=>c.replace(/<v>[^<]*<\/v>/,"<v>"+serial(sd)+"</v>"));
   s=setCell(s,"M5",c=>c.replace(/<v>[^<]*<\/v>/,"<v>"+serial(ed)+"</v>"));
   let hadir=0,sumH=0,nHol=0;const hrs=+def.D-+def.B-+def.H,rows=[];
-  for(let i=0;i<cap;i++){
+  for(let i=0;i<days;i++){
     const r=FIRST+i;
-    if(i>=days){for(const col of"ABCDEFGHIJK")s=setCell(s,col+r,c=>'<c r="'+col+r+'" s="'+styleOf(c)+'"/>');rows.push(null);continue}
+    s=setRowHt(s,r,CH[i]);
     const d=new Date(sd.getTime()+i*864e5),key=iso(d),wk=d.getUTCDay()===0||d.getUTCDay()===6;
     const hol=hm[key],cuti=!wk&&!hol&&!!cs&&d>=cs&&d<=ce,red=wk||!!hol||cuti,m=st[red?"r":"b"];
     if(hol&&!wk)nHol++;
@@ -269,12 +335,16 @@ async function build(){
     const remark=wk?null:hol?hol:cuti?"Cuti":customRemark(key);
     s=setCell(s,"K"+r,()=>remark===null?'<c r="K'+r+'" s="'+m.K+'" t="str"><f aca="false">IF(OR(TEXT(A'+r+', &quot;DDDD&quot;)=&quot;Saturday&quot;, TEXT(A'+r+', &quot;DDDD&quot;)=&quot;Sunday&quot;), &quot;Weekend&quot;, &quot;&quot;)</f><v>Weekend</v></c>':inl("K"+r,m.K,remark));
     for(const col of"LM")s=setCell(s,col+r,c=>restyle(c,m[col]),true);
-    rows.push({d,red,remark:remark===null?"Weekend":remark,t:red?["00:00","00:00","00:00","00:00","00:00","00:00","00:00"]:[hhmm(def.B),hhmm(def.D),hhmm(def.E),hhmm(def.G),hhmm(def.H),hhmm(hrs),hhmm(def.J)]});
+    const _rm=remark===null?"Weekend":remark,_ln=wrapLines(_rm,red),_need=_ln.length>1?_ln.length*LH+PAD:0,_e=Math.max(0,_need-CH[i]);
+    if(_e>0)s=setRowHt(s,r,+(CH[i]+_e).toFixed(2));
+    rows.push({d,red,lines:_ln,e:_e,remark:_rm,t:red?["00:00","00:00","00:00","00:00","00:00","00:00","00:00"]:[hhmm(def.B),hhmm(def.D),hhmm(def.E),hhmm(def.G),hhmm(def.H),hhmm(hrs),hhmm(def.J)]});
   }
-  s=setCell(s,"J46",c=>c.replace(/<f[^>]*>[^<]*<\/f>/,'<f aca="false">COUNTIF(I10:I'+LAST+',&quot;&gt;0&quot;)</f>').replace(/<v>[^<]*<\/v>/,"<v>"+hadir+"</v>"));
-  const i42=findCell(s,"I42");
-  if(i42){const t=totalFmt(styles,styleOf(i42[0]));if(t){styles=t.styles;s=setCell(s,"I42",c=>restyle(c,t.sid))}}
-  s=setCell(s,"I42",c=>c.replace(/SUM\(I10:I\d+\)/,"SUM(I10:I"+LAST+")").replace(/<v>[^<]*<\/v>/,"<v>"+sumH+"</v>"),true);
+  {const Et=rows.reduce((a,x)=>a+x.e,0),dy0=RB[RB.length-1]-RB[rows.length];if(703.8-dy0+Et>762)throw new Error("Remarks terlalu panjang sehingga tabel tidak muat dalam 1 halaman. Persingkat remarks atau kurangi jumlah remarks yang panjang.")}
+  const LL=FIRST-1+days,rI=11+days,rJ=15+days;
+  s=setCell(s,"J"+rJ,c=>c.replace(/<f[^>]*>[^<]*<\/f>/,'<f aca="false">COUNTIF(I10:I'+LL+',&quot;&gt;0&quot;)</f>').replace(/<v>[^<]*<\/v>/,"<v>"+hadir+"</v>"));
+  const i42=findCell(s,"I"+rI);
+  if(i42){const t=totalFmt(styles,styleOf(i42[0]));if(t){styles=t.styles;s=setCell(s,"I"+rI,c=>restyle(c,t.sid))}}
+  s=setCell(s,"I"+rI,c=>c.replace(/SUM\(I10:I\d+\)/,"SUM(I10:I"+LL+")").replace(/<v>[^<]*<\/v>/,"<v>"+sumH+"</v>"),true);
   z.file(path,s);z.file("xl/styles.xml",styles);
   let wb=await z.file("xl/workbook.xml").async("string");
   if(!/fullCalcOnLoad/.test(wb))wb=wb.replace("<calcPr",'<calcPr fullCalcOnLoad="1"');
@@ -300,14 +370,17 @@ function makePdf(M){
   const doc=new window.jspdf.jsPDF({unit:"pt",format:"letter",compress:true});
   doc.addFileToVFS("Carlito-Regular.ttf",FONT_R);doc.addFont("Carlito-Regular.ttf","Carlito","normal");
   doc.addFileToVFS("Carlito-Bold.ttf",FONT_B);doc.addFont("Carlito-Bold.ttf","Carlito","bold");
-  GEO.R.forEach(r=>{doc.setFillColor(r[4],r[5],r[6]);doc.rect(r[0],r[1],r[2]-r[0],r[3]-r[1],"F")});
+  const nR=M.rows.length,lo=RB[nR],hi=RB[RB.length-1],dy=hi-lo,E=[0];M.rows.forEach(r=>E.push(E[E.length-1]+(r.e||0)));const En=E[nR],
+    F=y=>{if(y<=lo+.25){let k=0;while(k<nR&&RB[k+1]<=y+.3)k++;return y+E[k]}return y<=hi+.25?lo+En:y-dy+En}; // baris tanggal yang tidak dipakai dihapus, bagian bawah naik
+  GEO.R.forEach(r=>{const y0=F(r[1]),y1=F(r[3]);if(y1-y0<.05)return;doc.setFillColor(r[4],r[5],r[6]);doc.rect(r[0],y0,r[2]-r[0],y1-y0,"F")});
   // tanda tangan: dipotong (crop) tepat di dalam kotak sel, digambar sebelum garis agar garis tetap utuh
-  if(M.imgs.sig&&M.imgs.sig.custom){const bx=353.8,by=670.8,bw=76,bh=31.8,[iw,ih]=imgSize(M.imgs.sig.u8),k=Math.min(bw/iw,bh/ih),w=iw*k,hh=ih*k;
+  if(M.imgs.sig&&M.imgs.sig.custom){const bx=353.8,by=670.8-dy+En,bw=76,bh=31.8,[iw,ih]=imgSize(M.imgs.sig.u8),k=Math.min(bw/iw,bh/ih),w=iw*k,hh=ih*k;
     doc.addImage("data:image/png;base64,"+M.imgs.sig.b64,"PNG",bx+(bw-w)/2,by+(bh-hh)/2,w,hh)}
-  else if(M.imgs.sig){doc.saveGraphicsState();doc.rect(372.2,670.6,38.1,31.8,null);doc.clip();doc.discardPath();
-    doc.addImage("data:image/jpeg;base64,"+M.imgs.sig.b64,"JPEG",375.8,662.2,34.5,50.5);doc.restoreGraphicsState()}
+  else if(M.imgs.sig){doc.saveGraphicsState();doc.rect(372.2,670.6-dy+En,38.1,31.8,null);doc.clip();doc.discardPath();
+    doc.addImage("data:image/jpeg;base64,"+M.imgs.sig.b64,"JPEG",375.8,662.2-dy+En,34.5,50.5);doc.restoreGraphicsState()}
   doc.setLineWidth(.75);
-  GEO.L.forEach(l=>{if(l[4])doc.setDrawColor(171,171,171);else doc.setDrawColor(0,0,0);doc.line(l[0],l[1],l[2],l[3])});
+  GEO.L.forEach(l=>{const hz=Math.abs(l[1]-l[3])<.05;if(dy>0&&hz&&l[1]>lo+.25&&l[1]<=hi+.25)return;const y0=F(l[1]),y1=F(l[3]);if(!hz&&y1-y0<.05)return;
+    if(l[4])doc.setDrawColor(171,171,171);else doc.setDrawColor(0,0,0);doc.line(l[0],y0,l[2],y1)});
   // logo (posisi dan ukuran sama seperti cetakan template)
   if(M.imgs.logo)doc.addImage("data:image/png;base64,"+M.imgs.logo.b64,"PNG",352.3,38.9,74.5,48.2);
   const T=(t,x,base,o={})=>{doc.setFont("Carlito",o.b?"bold":"normal");let sz=o.sz||8;doc.setFontSize(sz);if(o.mw)while(sz>5&&doc.getTextWidth(String(t))>o.mw){sz-=.25;doc.setFontSize(sz)}const c=o.c||[0,0,0];doc.setTextColor(c[0],c[1],c[2]);
@@ -324,17 +397,18 @@ function makePdf(M){
   [["Start","B"],["-","C"],["End","D"],["Start","E"],["-","F"],["End","G"]].forEach(([t,c])=>T(t,CX[c],110.21,{b:1,c:WH}));
   T("Hour(s)",CX.I,110.21,{b:1,c:WH});T(" OT",CX.J,110.21,{b:1,c:WH});
   // baris data
-  M.rows.forEach((r,i)=>{if(!r)return;const base=(RB[i]+RB[i+1])/2+2.82,c=r.red?RD:BLK3;
+  M.rows.forEach((r,i)=>{const top=RB[i]+E[i],hh=RB[i+1]-RB[i]+(r.e||0),cy=top+hh/2,base=cy+2.82,c=r.red?RD:BLK3;
     T(dfmt(r.d),CX.A,base,{c});
     [["B",r.t[0]],["C","-"],["D",r.t[1]],["E",r.t[2]],["F","-"],["G",r.t[3]],["H",r.t[4]],["I",r.t[5]],["J",r.t[6]]].forEach(([col,t])=>T(t,CX[col],base,{c}));
-    T(r.remark,CX.K,base,{c,b:1,mw:222})});
+    const L=r.lines||[r.remark];L.forEach((ln,j)=>T(ln,CX.K,cy+(j-(L.length-1)/2)*LH+2.82,{c,b:r.red?1:0,mw:222}))});
+  const TF=(t,x,base,o)=>T(t,x,base-dy+En,o);
   // footer
-  T("CUT - OFF",349.2,643.32,{b:1,c:WH,l:1});
+  TF("CUT - OFF",349.2,643.32,{b:1,c:WH,l:1});
   const th=Math.round(M.sumH*1440),tt=Math.floor(th/60)+":"+p2(th%60);
-  T("Total Hours ==>",131.5,661.29,{b:1,c:WH});T(tt,CX.I,661.29);T("0.00",CX.J,661.29);
-  T("Approval",CX.K,654.94,{b:1,c:WH});T("Employee",CX.KL,666.54,{b:1});T("Supervisor",CX.M,666.54,{b:1});
-  T("a.  Permit",18.9,680.65,{b:1,sz:10,l:1});T("b.  Sick",18.9,691.88,{b:1,sz:10,l:1});T("c.  Total Kehadiran",18.9,701.63,{b:1,sz:10,l:1});
-  T("0",CX.J,678.57);T("0",CX.J,689.77);T(String(M.hadir),CX.J,700.97);
+  TF("Total Hours ==>",131.5,661.29,{b:1,c:WH});TF(tt,CX.I,661.29);TF("0.00",CX.J,661.29);
+  TF("Approval",CX.K,654.94,{b:1,c:WH});TF("Employee",CX.KL,666.54,{b:1});TF("Supervisor",CX.M,666.54,{b:1});
+  TF("a.  Permit",18.9,680.65,{b:1,sz:10,l:1});TF("b.  Sick",18.9,691.88,{b:1,sz:10,l:1});TF("c.  Total Kehadiran",18.9,701.63,{b:1,sz:10,l:1});
+  TF("0",CX.J,678.57,{b:1});TF("0",CX.J,689.77,{b:1});TF(String(M.hadir),CX.J,700.97,{b:1});
   return doc.output("arraybuffer")}
 const BLK3=[0,0,0];
 

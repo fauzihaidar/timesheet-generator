@@ -17,8 +17,9 @@ Aplikasi web (satu file, tanpa server) untuk membuat **Form Timesheet Gajian** t
 - Sabtu/Minggu: baris merah, remarks `Weekend`, jam 00:00.
 - Libur nasional (SKB 3 Menteri 2026–2027): baris merah, remarks nama libur, jam 00:00, tidak dihitung kehadiran. Cuti bersama tidak dimerahkan.
 - Cuti: baris merah, remarks `Cuti`, jam 00:00.
-- Hari kerja lain: remarks `Test log` (atau remarks kegiatan kustom).
-- Logo, tanda tangan, kolom, dan baris template dipertahankan.
+- Hari kerja lain: remarks `Testing Backlog` (tidak bold), atau remarks kegiatan kustom (teks panjang otomatis wrap, maksimal 200 karakter).
+- Jumlah baris tanggal mengikuti panjang periode (28–31 hari); bagian bawah tabel menyesuaikan.
+- Logo, tanda tangan, dan kolom template dipertahankan.
 
 Libur untuk tahun lain bisa ditambahkan lewat kolom "Libur tambahan" (`YYYY-MM-DD, nama`).
 
