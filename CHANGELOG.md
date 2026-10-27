@@ -20,6 +20,7 @@ Nomor versi juga tertulis di bagian bawah halaman aplikasi ("Versi NN").
 | v24 | Template yang DIUPLOAD mempertahankan tanda tangannya di Excel dan PDF (template bawaan tetap tanpa tanda tangan) |
 | v25 | Pilihan template bawaan disembunyikan; template default = Bayu dengan nama "Timesheet Bulanan" (template Standar masih ada di kode, tersembunyi) |
 | v26 | Teks petunjuk (placeholder) di kolom Name Of Project, Location, dan Nama disembunyikan (kolom kosong tetap memakai isi template) |
+| v27 | Nama file hasil unduhan menjadi "Timesheet 21 September - 20 Oktober 2026" (Excel dan PDF; tahun ditulis di kedua sisi jika periode melewati pergantian tahun) |
 
 Catatan: v11, v19, dan v20 adalah versi perantara yang tidak disimpan sebagai file terpisah; isinya sudah tercakup di v12 dan v21.
 

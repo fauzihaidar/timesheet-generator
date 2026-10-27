@@ -6,7 +6,7 @@ Aplikasi web (satu file, tanpa server) untuk membuat **Form Timesheet Gajian** t
 1. Buka halaman aplikasi (GitHub Pages). Template "Timesheet Bulanan" terpasang otomatis (template lain bisa diupload).
 2. Pilih tanggal mulai periode (tanggal akhir terisi otomatis: mulai + 1 bulan − 1 hari).
 3. Isi cuti dan remarks kegiatan bila perlu (opsional).
-4. Klik **Unduh Excel** atau **Unduh PDF**.
+4. Klik **Unduh Excel** atau **Unduh PDF**. Nama file otomatis, contoh: `Timesheet 21 September - 20 Oktober 2026`.
 
 ## Opsi tambahan
 - **Identitas & tanda tangan (opsional):** ganti *Name Of Project*, *Location*, *Nama*, dan upload gambar tanda tangan (Employee). Kosong = pakai isi template. Ukuran tanda tangan otomatis disesuaikan dengan kotak di template.

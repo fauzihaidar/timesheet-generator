@@ -72,7 +72,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div id="msg"></div>
 <div id="res"></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<p class="s" style="margin-top:18px;font-size:12px">Versi 26 · template bawaan otomatis terpasang</p>
+<p class="s" style="margin-top:18px;font-size:12px">Versi 27 · template bawaan otomatis terpasang</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -366,6 +366,10 @@ async function readTplSig(z){
       geo:{c1:+fr[1],o1:+fr[2],r1:+fr[3],ro1:+fr[4],c2:+fr[5],o2:+fr[6],r2:+fr[7],ro2:+fr[8],l:g("l"),t:g("t"),r:g("r"),b:g("b")}}}
   return null}
 
+// Nama file: "Timesheet 21 September - 20 Oktober 2026" (tahun ditulis sekali jika sama; jika beda tahun, tahun ditulis di kedua sisi)
+function fileTitle(sd,ed){const dm=d=>d.getUTCDate()+" "+BLN[d.getUTCMonth()],y1=sd.getUTCFullYear(),y2=ed.getUTCFullYear();
+  return"Timesheet "+dm(sd)+(y1===y2?"":" "+y1)+" - "+dm(ed)+" "+y2}
+
 async function build(){
   const sd=parse($("s").value),ed=parse($("e").value);
   const days=Math.round((ed-sd)/864e5)+1,cap=31;
@@ -443,7 +447,7 @@ async function build(){
   const cw=Array(13).fill(0);(s.match(/<col\b[^>]*>/g)||[]).forEach(c=>{const a=+c.match(/min="(\d+)"/)[1],b=+c.match(/max="(\d+)"/)[1],w=+c.match(/width="([\d.]+)"/)[1];for(let k=a;k<=b&&k<=13;k++)cw[k-1]=w});
   const imgs={};for(const n of Object.keys(z.files).filter(n=>/^xl\/media\/[^\/]+$/.test(n))){if(tsig&&n===tsig.path)continue;const ext=n.split(".").pop().toLowerCase();imgs[/signature_custom/.test(n)?"sig":ext==="png"?"logo":"sig"]={ext,b64:await z.file(n).async("base64"),u8:await z.file(n).async("uint8array"),custom:/signature_custom/.test(n)}}
   if(tsig)imgs.sig={ext:tsig.ext,b64:tsig.b64,u8:tsig.u8,custom:false,geo:tsig.geo};
-  return{z,sd,ed,hadir,sumH,nHol,rows,meta,cw,imgs,tl:F0-1+days,name:"Form Timesheet Gajian "+fmt(sd)+" - "+fmt(ed)+"_1"}}
+  return{z,sd,ed,hadir,sumH,nHol,rows,meta,cw,imgs,tl:F0-1+days,name:fileTitle(sd,ed)}}
 
 function imgSize(u){if(u[0]===0x89)return[(u[16]<<24|u[17]<<16|u[18]<<8|u[19]),(u[20]<<24|u[21]<<16|u[22]<<8|u[23])];
   let i=2;while(i<u.length){if(u[i]!==0xFF){i++;continue}const k=u[i+1];if(k>=0xC0&&k<=0xCF&&![0xC4,0xC8,0xCC].includes(k))return[u[i+7]<<8|u[i+8],u[i+5]<<8|u[i+6]];i+=2+(u[i+2]<<8|u[i+3])}return[1,1]}
